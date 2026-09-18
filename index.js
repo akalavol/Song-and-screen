@@ -39,7 +39,16 @@ app.post('/api/start', (req, res) => {
     const filepath = path.join(outputDir, filename);
 
     const displayConfig = getDisplayConfig();
-    ffmpegProcess = createFFmpeg(displayConfig, filepath, (error) => {
+
+    // If screen only requested, remove audio from config
+    const recordingConfig = req.body?.screenOnly ? {
+      ...displayConfig,
+      audioFormat: null,
+      audioInput: null,
+      audioDevice: null
+    } : displayConfig;
+
+    ffmpegProcess = createFFmpeg(recordingConfig, filepath, (error) => {
       if (error && isRecording) {
         console.error('Recording error:', error);
         isRecording = false;
@@ -48,7 +57,7 @@ app.post('/api/start', (req, res) => {
     });
 
     isRecording = true;
-    res.json({ recording: true, filename });
+    res.json({ recording: true, filename, screenOnly: req.body?.screenOnly });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
