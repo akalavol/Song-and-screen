@@ -148,6 +148,11 @@
       <button class="stop-btn" id="stopBtn" disabled>Stop Recording</button>
     </div>
 
+    <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px; font-size: 14px; cursor: pointer;">
+      <input type="checkbox" id="screenOnly" checked style="cursor: pointer;">
+      <span>📹 Screen only (recommended)</span>
+    </label>
+
     <div class="info">
       <strong>💾 Output Location:</strong>
       <span id="outputPath">output/ folder</span>
@@ -181,16 +186,28 @@
 
     startBtn.addEventListener('click', async () => {
       try {
-        const res = await fetch('/api/start', { method: 'POST' });
+        const screenOnly = document.getElementById('screenOnly').checked;
+        const res = await fetch('/api/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ screenOnly })
+        });
         const data = await res.json();
         if (res.ok) {
           updateUI(true);
           outputPath.textContent = `output/${data.filename}`;
+          if (data.screenOnly) {
+            status.textContent = '🎬 Recording (screen only, no audio)';
+          }
         } else {
-          status.textContent = `Error: ${data.error}`;
+          status.textContent = '❌ ' + data.error;
+          status.style.background = '#ffebee';
+          status.style.color = '#c62828';
         }
       } catch (error) {
-        status.textContent = `Error: ${error.message}`;
+        status.textContent = '❌ ' + error.message;
+        status.style.background = '#ffebee';
+        status.style.color = '#c62828';
       }
     });
 

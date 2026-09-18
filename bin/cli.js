@@ -5,6 +5,7 @@ import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
+import { ensureFFmpeg } from '../lib/recorder.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -24,11 +25,38 @@ function checkServerReady() {
 }
 
 async function main() {
+  try {
+    ensureFFmpeg();
+  } catch (error) {
+    console.error(`\n${error.message}\n`);
+    process.exit(1);
+  }
+
   console.log('🎬 Starting Screen Recorder...');
+
+  let actualPort = PORT;
+  let serverReady = false;
 
   const child = spawn('node', [path.join(__dirname, '..', 'index.js')], {
     cwd: path.join(__dirname, '..'),
-    stdio: 'inherit'
+    stdio: ['inherit', 'pipe', 'pipe']
+  });
+
+  child.stdout.on('data', (data) => {
+    const output = data.toString();
+    console.log(output);
+
+    if (output.includes('running at http://localhost:')) {
+      const match = output.match(/localhost:(\d+)/);
+      if (match) {
+        actualPort = parseInt(match[1]);
+        serverReady = true;
+      }
+    }
+  });
+
+  child.stderr.on('data', (data) => {
+    console.error(data.toString());
   });
 
   process.on('SIGINT', () => {
@@ -38,9 +66,17 @@ async function main() {
   });
 
   try {
-    await checkServerReady();
-    console.log(`✅ Server ready! Opening http://localhost:${PORT}`);
-    await open(`http://localhost:${PORT}`);
+    await new Promise((resolve) => {
+      const check = setInterval(() => {
+        if (serverReady) {
+          clearInterval(check);
+          resolve();
+        }
+      }, 100);
+    });
+
+    console.log(`✅ Opening http://localhost:${actualPort}`);
+    await open(`http://localhost:${actualPort}`);
   } catch (error) {
     console.error('Failed to start:', error.message);
     process.exit(1);

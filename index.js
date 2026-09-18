@@ -4,7 +4,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import { createFFmpeg } from './lib/recorder.js';
+import { createFFmpeg, ensureFFmpeg } from './lib/recorder.js';
 import { getDisplayConfig } from './lib/platform.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -31,13 +31,24 @@ app.post('/api/start', (req, res) => {
     return res.status(400).json({ error: 'Already recording' });
   }
 
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-  const filename = `screen-${timestamp}.mp4`;
-  const filepath = path.join(outputDir, filename);
-
   try {
+    ensureFFmpeg();
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const filename = `screen-${timestamp}.mp4`;
+    const filepath = path.join(outputDir, filename);
+
     const displayConfig = getDisplayConfig();
-    ffmpegProcess = createFFmpeg(displayConfig, filepath, (error) => {
+
+    // If screen only requested, remove audio from config
+    const recordingConfig = req.body?.screenOnly ? {
+      ...displayConfig,
+      audioFormat: null,
+      audioInput: null,
+      audioDevice: null
+    } : displayConfig;
+
+    ffmpegProcess = createFFmpeg(recordingConfig, filepath, (error) => {
       if (error && isRecording) {
         console.error('Recording error:', error);
         isRecording = false;
@@ -46,7 +57,7 @@ app.post('/api/start', (req, res) => {
     });
 
     isRecording = true;
-    res.json({ recording: true, filename });
+    res.json({ recording: true, filename, screenOnly: req.body?.screenOnly });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -67,7 +78,26 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`Screen Recorder running at http://localhost:${PORT}`);
-  console.log(`Recordings will be saved to: ${outputDir}`);
+const server = app.listen(PORT, () => {
+  try {
+    ensureFFmpeg();
+    console.log(`✅ Screen Recorder running at http://localhost:${PORT}`);
+    console.log(`📁 Recordings will be saved to: ${outputDir}`);
+  } catch (error) {
+    console.error(`\n⚠️  ${error.message}\n`);
+  }
+});
+
+server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.warn(`⚠️  Port ${PORT} is already in use, trying next port...`);
+    const newPort = PORT + 1;
+    process.env.PORT = newPort;
+    app.listen(newPort, () => {
+      console.log(`✅ Screen Recorder running at http://localhost:${newPort}`);
+      console.log(`📁 Recordings will be saved to: ${outputDir}`);
+    });
+  } else {
+    throw error;
+  }
 });

@@ -14,7 +14,7 @@ A simple desktop screen recorder that captures your screen and audio directly to
 ## Requirements
 
 - **Node.js** (v16+)
-- **ffmpeg** (must be installed and in PATH)
+- **ffmpeg** (must be installed and in PATH, or set `FFMPEG_PATH` environment variable)
 
 ### Install ffmpeg
 
@@ -29,9 +29,15 @@ brew install ffmpeg
 ```
 
 **Windows:**
-Download from [ffmpeg.org](https://ffmpeg.org/download.html) or use:
-```bash
-choco install ffmpeg
+The app will automatically search common locations. Otherwise:
+- Download from [ffmpeg.org](https://ffmpeg.org/download.html)
+- Or install via: `choco install ffmpeg`
+- Or set `FFMPEG_PATH` environment variable to your ffmpeg.exe location
+
+**Manual Path (Windows):**
+```cmd
+set FFMPEG_PATH=C:\path\to\ffmpeg\bin\ffmpeg.exe
+npm start
 ```
 
 ## Installation
