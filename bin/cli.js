@@ -5,6 +5,7 @@ import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
+import { ensureFFmpeg } from '../lib/recorder.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -24,6 +25,13 @@ function checkServerReady() {
 }
 
 async function main() {
+  try {
+    ensureFFmpeg();
+  } catch (error) {
+    console.error(`\n${error.message}\n`);
+    process.exit(1);
+  }
+
   console.log('🎬 Starting Screen Recorder...');
 
   const child = spawn('node', [path.join(__dirname, '..', 'index.js')], {
