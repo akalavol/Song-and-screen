@@ -69,12 +69,26 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   try {
     ensureFFmpeg();
     console.log(`✅ Screen Recorder running at http://localhost:${PORT}`);
     console.log(`📁 Recordings will be saved to: ${outputDir}`);
   } catch (error) {
     console.error(`\n⚠️  ${error.message}\n`);
+  }
+});
+
+server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.warn(`⚠️  Port ${PORT} is already in use, trying next port...`);
+    const newPort = PORT + 1;
+    process.env.PORT = newPort;
+    app.listen(newPort, () => {
+      console.log(`✅ Screen Recorder running at http://localhost:${newPort}`);
+      console.log(`📁 Recordings will be saved to: ${outputDir}`);
+    });
+  } else {
+    throw error;
   }
 });
