@@ -68,9 +68,29 @@ app.post('/api/stop', (req, res) => {
     return res.status(400).json({ error: 'Not recording' });
   }
 
-  ffmpegProcess.kill('SIGTERM');
   isRecording = false;
-  ffmpegProcess = null;
+
+  // Send 'q' to stdin to gracefully stop ffmpeg
+  if (ffmpegProcess.stdin) {
+    ffmpegProcess.stdin.write('q');
+  } else {
+    // Fallback to SIGTERM
+    ffmpegProcess.kill('SIGTERM');
+  }
+
+  // Wait for process to finish (max 5 seconds)
+  const timeout = setTimeout(() => {
+    if (ffmpegProcess) {
+      console.warn('Force killing ffmpeg (timeout)');
+      ffmpegProcess.kill('SIGKILL');
+    }
+  }, 5000);
+
+  ffmpegProcess.on('close', () => {
+    clearTimeout(timeout);
+    ffmpegProcess = null;
+  });
+
   res.json({ recording: false });
 });
 

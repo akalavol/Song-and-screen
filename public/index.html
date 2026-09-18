@@ -213,16 +213,22 @@
 
     stopBtn.addEventListener('click', async () => {
       try {
+        stopBtn.disabled = true;
+        status.textContent = '⏹️ Stopping recording...';
         const res = await fetch('/api/stop', { method: 'POST' });
         const data = await res.json();
         if (res.ok) {
           updateUI(false);
-          status.textContent = 'Recording saved!';
+          status.textContent = '✅ Recording saved!';
+          await new Promise(r => setTimeout(r, 2000)); // Wait 2s for file finalization
+          status.textContent = 'Ready';
         } else {
           status.textContent = `Error: ${data.error}`;
         }
       } catch (error) {
         status.textContent = `Error: ${error.message}`;
+      } finally {
+        stopBtn.disabled = false;
       }
     });
 
