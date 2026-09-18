@@ -1,0 +1,23 @@
+{
+  "name": "screen-recorder-mp4",
+  "version": "1.0.0",
+  "description": "Simple MP4 screen recorder with UI",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "cli": "node bin/cli.js"
+  },
+  "bin": {
+    "screen-recorder": "bin/cli.js"
+  },
+  "keywords": ["screen", "recorder", "mp4", "ffmpeg"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "fluent-ffmpeg": "^2.1.3",
+    "open": "^9.1.0"
+  },
+  "devDependencies": {}
+}

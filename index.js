@@ -1,0 +1,73 @@
+#!/usr/bin/env node
+
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+import { createFFmpeg } from './lib/recorder.js';
+import { getDisplayConfig } from './lib/platform.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+let ffmpegProcess = null;
+let isRecording = false;
+
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json());
+
+const outputDir = path.join(__dirname, 'output');
+if (!fs.existsSync(outputDir)) {
+  fs.mkdirSync(outputDir, { recursive: true });
+}
+
+app.get('/api/status', (req, res) => {
+  res.json({ recording: isRecording });
+});
+
+app.post('/api/start', (req, res) => {
+  if (isRecording) {
+    return res.status(400).json({ error: 'Already recording' });
+  }
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+  const filename = `screen-${timestamp}.mp4`;
+  const filepath = path.join(outputDir, filename);
+
+  try {
+    const displayConfig = getDisplayConfig();
+    ffmpegProcess = createFFmpeg(displayConfig, filepath, (error) => {
+      if (error && isRecording) {
+        console.error('Recording error:', error);
+        isRecording = false;
+        ffmpegProcess = null;
+      }
+    });
+
+    isRecording = true;
+    res.json({ recording: true, filename });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/stop', (req, res) => {
+  if (!isRecording || !ffmpegProcess) {
+    return res.status(400).json({ error: 'Not recording' });
+  }
+
+  ffmpegProcess.kill('SIGTERM');
+  isRecording = false;
+  ffmpegProcess = null;
+  res.json({ recording: false });
+});
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.listen(PORT, () => {
+  console.log(`Screen Recorder running at http://localhost:${PORT}`);
+  console.log(`Recordings will be saved to: ${outputDir}`);
+});
