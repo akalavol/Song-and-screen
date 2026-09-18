@@ -4,7 +4,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import { createFFmpeg } from './lib/recorder.js';
+import { createFFmpeg, ensureFFmpeg } from './lib/recorder.js';
 import { getDisplayConfig } from './lib/platform.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -31,11 +31,13 @@ app.post('/api/start', (req, res) => {
     return res.status(400).json({ error: 'Already recording' });
   }
 
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-  const filename = `screen-${timestamp}.mp4`;
-  const filepath = path.join(outputDir, filename);
-
   try {
+    ensureFFmpeg();
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const filename = `screen-${timestamp}.mp4`;
+    const filepath = path.join(outputDir, filename);
+
     const displayConfig = getDisplayConfig();
     ffmpegProcess = createFFmpeg(displayConfig, filepath, (error) => {
       if (error && isRecording) {
@@ -68,6 +70,11 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Screen Recorder running at http://localhost:${PORT}`);
-  console.log(`Recordings will be saved to: ${outputDir}`);
+  try {
+    ensureFFmpeg();
+    console.log(`✅ Screen Recorder running at http://localhost:${PORT}`);
+    console.log(`📁 Recordings will be saved to: ${outputDir}`);
+  } catch (error) {
+    console.error(`\n⚠️  ${error.message}\n`);
+  }
 });

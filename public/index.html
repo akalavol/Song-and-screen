@@ -187,10 +187,14 @@
           updateUI(true);
           outputPath.textContent = `output/${data.filename}`;
         } else {
-          status.textContent = `Error: ${data.error}`;
+          status.textContent = '❌ ' + data.error;
+          status.style.background = '#ffebee';
+          status.style.color = '#c62828';
         }
       } catch (error) {
-        status.textContent = `Error: ${error.message}`;
+        status.textContent = '❌ ' + error.message;
+        status.style.background = '#ffebee';
+        status.style.color = '#c62828';
       }
     });
 
